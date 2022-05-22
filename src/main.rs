@@ -1,4 +1,4 @@
-use std::{fs::{self, DirEntry}, process::Command, fmt::format, os::unix::prelude::CommandExt};
+use std::{fs::{self, DirEntry}, process::Command};
 use clap::Parser;
 
 const PROJECT_DIR_URL: &str = "/Users/tyrkinn/github/tyrkinn";
@@ -45,8 +45,7 @@ fn list_dir(dir_url: String) {
 }
 
 fn open_project(project_name: String, dir_url: String) {
-    println!("{:?}", get_projects(String::from(PROJECT_DIR_URL)));
-    if get_projects(String::from(PROJECT_DIR_URL)).contains(&project_name) {
+    if get_projects(dir_url.clone()).contains(&project_name) {
         Command::new("code")
         .arg("-r")
         .arg(format!("{}/{}", dir_url, project_name))
@@ -63,7 +62,7 @@ fn main() {
     if args.list_projects {
         list_dir(args.project_dir.clone())
     }
-    if args.open_project.is_some() {
+    else if args.open_project.is_some() {
         open_project(args.open_project.unwrap(), args.project_dir);
     }
 }
