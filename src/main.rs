@@ -1,12 +1,11 @@
 use clap::Parser;
 use std::{
     fs::{self, DirEntry},
-    process::Command,
+    process::Command, collections::HashMap
 };
 
 const PROJECT_DIR_URL: &str = "/Users/tyrkinn/github/tyrkinn";
-const TYPESCRIPT_INDICATOR_FILE: &str = "tsconfig.json";
-const RUST_INDICATOR_FILE: &str = "Cargo.toml";
+
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -21,9 +20,11 @@ struct Args {
     open_project: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy)]
 enum ProjectType {
     Typescript,
-    Rust
+    Rust,
+    Elixir
 }
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -43,21 +44,14 @@ fn get_projects(dir_url: &String) -> Vec<std::string::String> {
 }
 
 fn list_dir(dir_url: &String) {
-    get_projects(dir_url)
-        .into_iter()
-        .for_each(|f| {
-            let project_type = get_project_language(&f);
-            if project_type.is_some() {
-                let project_lang = match project_type.unwrap() {
-                    ProjectType::Typescript => "Typescript",
-                    ProjectType::Rust => "Rust"
-                };
-                println!("{} - {}", f, project_lang);
-            }
-            else {
-                println!("{}", f);
-            }
-        })
+    get_projects(dir_url).into_iter().for_each(|f| {
+        let project_type = get_project_language(&f);
+        if project_type.is_some() {
+            println!("{} - {:?}", f, project_type.unwrap());
+        } else {
+            println!("{}", f);
+        }
+    })
 }
 
 fn open_project(project_name: &String, dir_url: &String) {
@@ -73,18 +67,22 @@ fn open_project(project_name: &String, dir_url: &String) {
 }
 
 fn get_project_language(project_name: &String) -> Option<ProjectType> {
+    let projects_hashmap: HashMap<&str, ProjectType> = HashMap::from([
+        ("tsconfig.json", ProjectType::Typescript),
+        ("Cargo.toml", ProjectType::Rust),
+        ("mix.exs", ProjectType::Elixir)
+    ]);
     let project_full_path: String = format!("{}/{}", PROJECT_DIR_URL, project_name);
     let project_files = fs::read_dir(project_full_path)
         .unwrap()
         .map(|x| x.unwrap().file_name().into_string().unwrap())
         .collect::<Vec<String>>();
-    if project_files.contains(&TYPESCRIPT_INDICATOR_FILE.to_owned()) {
-        return Some(ProjectType::Typescript);
-    } else if project_files.contains(&RUST_INDICATOR_FILE.to_owned()) {
-        return Some(ProjectType::Rust);
-    } else {
-        return None;
+    for &key in projects_hashmap.keys() {
+        if project_files.contains(&key.to_owned()) {
+            return Some(projects_hashmap[key])
+        }
     }
+    return None
 }
 
 fn main() {
