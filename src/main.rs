@@ -1,4 +1,4 @@
-use clap::{Arg, Command};
+use clap::{arg, Arg, Command};
 use std::process;
 use std::{
     collections::HashMap,
@@ -40,6 +40,7 @@ fn config_args<'a>() -> Command<'a> {
                 .long("create")
                 .takes_value(true),
         )
+        .arg(arg!(-r --remove <PROJECT_NAME> "Remove project"))
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -63,6 +64,14 @@ fn get_projects(dir_url: &String) -> Vec<std::string::String> {
         .filter(|f| f.file_type().unwrap().is_dir() && !is_hidden(f))
         .map(|f| f.file_name().into_string().unwrap())
         .collect::<Vec<String>>()
+}
+
+fn remove_project(project_name: &String, dir_url: &String) {
+    process::Command::new("rm")
+        .arg("-rf")
+        .arg(format!("{}/{}", dir_url, project_name))
+        .output()
+        .expect("Cannot remove project with given name");
 }
 
 fn list_dir(dir_url: &String) {
@@ -121,6 +130,8 @@ fn get_project_language(project_name: &String) -> Option<ProjectType> {
 }
 
 fn main() {
+    // TODO: Get rid of else-if statements
+
     let args = config_args().get_matches();
     let projects_dir = args.value_of("dir").unwrap().to_owned();
     if args.is_present("list_projects") {
@@ -135,5 +146,8 @@ fn main() {
     } else if args.value_of("create_project").is_some() {
         let project_path = args.value_of("create_project").unwrap();
         create_project(&project_path.to_owned(), &projects_dir)
+    } else if args.value_of("remove").is_some() {
+        let project_path = args.value_of("remove").unwrap();
+        remove_project(&project_path.to_owned(), &projects_dir)
     }
 }
