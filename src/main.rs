@@ -1,30 +1,52 @@
-use clap::Parser;
+use clap::{Arg, Command};
+use std::process;
 use std::{
+    collections::HashMap,
     fs::{self, DirEntry},
-    process::Command, collections::HashMap
 };
-
 const PROJECT_DIR_URL: &str = "/Users/tyrkinn/github/tyrkinn";
-
-
-#[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
-struct Args {
-    #[clap(short, long, default_value = PROJECT_DIR_URL)]
-    project_dir: String,
-
-    #[clap(short, long)]
-    list_projects: bool,
-
-    #[clap(short, long)]
-    open_project: Option<String>,
+fn config_args<'a>() -> Command<'a> {
+    // TODO: Rewrite using "arg!" macro
+    Command::new("Pro cli")
+        .about("Simple cli to manage and create projects")
+        .arg(
+            Arg::new("dir")
+                .long("dir")
+                .short('d')
+                .takes_value(true)
+                .default_value(PROJECT_DIR_URL),
+        )
+        .arg(
+            Arg::new("list_projects")
+                .long("list")
+                .short('l')
+                .takes_value(false),
+        )
+        .arg(
+            Arg::new("open_project")
+                .long("open")
+                .short('o')
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("get_path")
+                .short('p')
+                .long("path")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::new("create_project")
+                .short('c')
+                .long("create")
+                .takes_value(true),
+        )
 }
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
     Typescript,
     Rust,
-    Elixir
+    Elixir,
 }
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -56,7 +78,7 @@ fn list_dir(dir_url: &String) {
 
 fn open_project(project_name: &String, dir_url: &String) {
     if get_projects(dir_url).contains(project_name) {
-        Command::new("code")
+        process::Command::new("code")
             .arg("-r")
             .arg(format!("{}/{}", dir_url, project_name))
             .output()
@@ -66,11 +88,24 @@ fn open_project(project_name: &String, dir_url: &String) {
     }
 }
 
+fn create_project(project_name: &String, dir_url: &String) {
+    process::Command::new("pnpx")
+        .arg("degit")
+        .arg("tyrkinn/frontend-templates/chakra-jotai-vitest")
+        .arg(format!("{}/{}", dir_url, project_name))
+        .output()
+        .expect("Error occured while creating project");
+}
+
+fn get_project_path(project_name: &String, projects_dir: &String) {
+    println!("{}/{}", projects_dir, project_name);
+}
+
 fn get_project_language(project_name: &String) -> Option<ProjectType> {
     let projects_hashmap: HashMap<&str, ProjectType> = HashMap::from([
         ("tsconfig.json", ProjectType::Typescript),
         ("Cargo.toml", ProjectType::Rust),
-        ("mix.exs", ProjectType::Elixir)
+        ("mix.exs", ProjectType::Elixir),
     ]);
     let project_full_path: String = format!("{}/{}", PROJECT_DIR_URL, project_name);
     let project_files = fs::read_dir(project_full_path)
@@ -79,17 +114,26 @@ fn get_project_language(project_name: &String) -> Option<ProjectType> {
         .collect::<Vec<String>>();
     for &key in projects_hashmap.keys() {
         if project_files.contains(&key.to_owned()) {
-            return Some(projects_hashmap[key])
+            return Some(projects_hashmap[key]);
         }
     }
-    return None
+    return None;
 }
 
 fn main() {
-    let args = Args::parse();
-    if args.list_projects {
-        list_dir(&args.project_dir)
-    } else if args.open_project.is_some() {
-        open_project(&args.open_project.unwrap(), &args.project_dir);
+    let args = config_args().get_matches();
+    let projects_dir = args.value_of("dir").unwrap().to_owned();
+    if args.is_present("list_projects") {
+        list_dir(&projects_dir);
+    } else if args.value_of("open_project").is_some() {
+        let project_name = args.value_of("open_project").unwrap();
+        open_project(&project_name.to_owned(), &projects_dir);
+    } else if args.value_of("get_path").is_some() {
+        let project_path = args.value_of("get_path").unwrap();
+
+        get_project_path(&project_path.to_owned(), &projects_dir);
+    } else if args.value_of("create_project").is_some() {
+        let project_path = args.value_of("create_project").unwrap();
+        create_project(&project_path.to_owned(), &projects_dir)
     }
 }
