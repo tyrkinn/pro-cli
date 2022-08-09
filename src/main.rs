@@ -1,4 +1,4 @@
-use clap::{arg, Arg, Command};
+use clap::{arg, Command};
 use std::process;
 use std::{
     collections::HashMap,
@@ -6,41 +6,37 @@ use std::{
 };
 const PROJECT_DIR_URL: &str = "/Users/tyrkinn/github/tyrkinn";
 fn config_args<'a>() -> Command<'a> {
-    // TODO: Rewrite using "arg!" macro
     Command::new("Pro cli")
         .about("Simple cli to manage and create projects")
         .arg(
-            Arg::new("dir")
-                .long("dir")
-                .short('d')
-                .takes_value(true)
-                .default_value(PROJECT_DIR_URL),
+            arg!(-d --dir <PROJECT_DIR_PATH> "Set default where your projects located")
+                .required(false),
         )
         .arg(
-            Arg::new("list_projects")
-                .long("list")
-                .short('l')
-                .takes_value(false),
+            arg!(-l --list "List all projects in `--dir`")
+                .required(false)
+                .id("list_projects"),
         )
         .arg(
-            Arg::new("open_project")
-                .long("open")
-                .short('o')
-                .takes_value(true),
+            arg!(-o --open <PROJECT_NAME> "Open project in vscode with reloading window")
+                .required(false)
+                .id("open_project"),
         )
         .arg(
-            Arg::new("get_path")
-                .short('p')
-                .long("path")
-                .takes_value(true),
+            arg!(-p --path <PROJECT_NAME> "Get full absolute path of project by name")
+                .required(false)
+                .id("get_path"),
         )
         .arg(
-            Arg::new("create_project")
-                .short('c')
-                .long("create")
-                .takes_value(true),
+            arg!(-c --create <PROJECT_NAME> "Create project from basic react template")
+                .required(false)
+                .id("create_project"),
         )
-        .arg(arg!(-r --remove <PROJECT_NAME> "Remove project"))
+        .arg(
+            arg!(-r --remove <PROJECT_NAME> "Remove project dir from `--dir` by name")
+                .required(false)
+                .id("remove"),
+        )
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -133,7 +129,7 @@ fn main() {
     // TODO: Get rid of else-if statements
 
     let args = config_args().get_matches();
-    let projects_dir = args.value_of("dir").unwrap().to_owned();
+    let projects_dir = args.value_of("dir").unwrap_or(PROJECT_DIR_URL).to_owned();
     if args.is_present("list_projects") {
         list_dir(&projects_dir);
     } else if args.value_of("open_project").is_some() {
@@ -141,7 +137,6 @@ fn main() {
         open_project(&project_name.to_owned(), &projects_dir);
     } else if args.value_of("get_path").is_some() {
         let project_path = args.value_of("get_path").unwrap();
-
         get_project_path(&project_path.to_owned(), &projects_dir);
     } else if args.value_of("create_project").is_some() {
         let project_path = args.value_of("create_project").unwrap();
