@@ -1,43 +1,10 @@
-use clap::{arg, Command};
+pub mod config;
+use config::ProConfig;
 use std::process;
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
 };
-const PROJECT_DIR_URL: &str = "/Users/tyrkinn/github/tyrkinn";
-fn config_args<'a>() -> Command<'a> {
-    Command::new("Pro cli")
-        .about("Simple cli to manage and create projects")
-        .arg(
-            arg!(-d --dir <PROJECT_DIR_PATH> "Set default where your projects located")
-                .required(false),
-        )
-        .arg(
-            arg!(-l --list "List all projects in `--dir`")
-                .required(false)
-                .id("list_projects"),
-        )
-        .arg(
-            arg!(-o --open <PROJECT_NAME> "Open project in vscode with reloading window")
-                .required(false)
-                .id("open_project"),
-        )
-        .arg(
-            arg!(-p --path <PROJECT_NAME> "Get full absolute path of project by name")
-                .required(false)
-                .id("get_path"),
-        )
-        .arg(
-            arg!(-c --create <PROJECT_NAME> "Create project from basic react template")
-                .required(false)
-                .id("create_project"),
-        )
-        .arg(
-            arg!(-r --remove <PROJECT_NAME> "Remove project dir from `--dir` by name")
-                .required(false)
-                .id("remove"),
-        )
-}
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
@@ -72,7 +39,7 @@ fn remove_project(project_name: &String, dir_url: &String) {
 
 fn list_dir(dir_url: &String) {
     get_projects(dir_url).into_iter().for_each(|f| {
-        let project_type = get_project_language(&f);
+        let project_type = get_project_language(&f, dir_url);
         if project_type.is_some() {
             println!("{} - {:?}", f, project_type.unwrap());
         } else {
@@ -106,13 +73,13 @@ fn get_project_path(project_name: &String, projects_dir: &String) {
     println!("{}/{}", projects_dir, project_name);
 }
 
-fn get_project_language(project_name: &String) -> Option<ProjectType> {
+fn get_project_language(project_name: &String, projects_dir: &String) -> Option<ProjectType> {
     let projects_hashmap: HashMap<&str, ProjectType> = HashMap::from([
         ("tsconfig.json", ProjectType::Typescript),
         ("Cargo.toml", ProjectType::Rust),
         ("mix.exs", ProjectType::Elixir),
     ]);
-    let project_full_path: String = format!("{}/{}", PROJECT_DIR_URL, project_name);
+    let project_full_path: String = format!("{}/{}", projects_dir, project_name);
     let project_files = fs::read_dir(project_full_path)
         .unwrap()
         .map(|x| x.unwrap().file_name().into_string().unwrap())
@@ -125,24 +92,54 @@ fn get_project_language(project_name: &String) -> Option<ProjectType> {
     return None;
 }
 
-fn main() {
-    // TODO: Get rid of else-if statements
+fn prepare_config() -> ProConfig {
+    if !config::file_exists(config::config_path()) {
+        let projects_path = config::at_home("projects");
+        let default_config = ProConfig {
+            project_path: projects_path.to_owned() 
+        };
+        config::create_config_file();
+        config::write_config(&default_config);
+        fs::create_dir_all(projects_path).expect("Can't create projects dir");
+        return default_config;
+    } else {
+        return config::read_config();
+    }
+}
 
-    let args = config_args().get_matches();
-    let projects_dir = args.value_of("dir").unwrap_or(PROJECT_DIR_URL).to_owned();
-    if args.is_present("list_projects") {
-        list_dir(&projects_dir);
-    } else if args.value_of("open_project").is_some() {
-        let project_name = args.value_of("open_project").unwrap();
-        open_project(&project_name.to_owned(), &projects_dir);
-    } else if args.value_of("get_path").is_some() {
-        let project_path = args.value_of("get_path").unwrap();
-        get_project_path(&project_path.to_owned(), &projects_dir);
-    } else if args.value_of("create_project").is_some() {
-        let project_path = args.value_of("create_project").unwrap();
-        create_project(&project_path.to_owned(), &projects_dir)
-    } else if args.value_of("remove").is_some() {
-        let project_path = args.value_of("remove").unwrap();
-        remove_project(&project_path.to_owned(), &projects_dir)
+fn display_help_message() {
+    println!(r#"
+Usage:
+  
+    pro list                  -> List projects
+    pro create <PROJECT_NAME> -> Create project
+    pro path <PROJECT_NAME>   -> Get full project path
+    pro remove <PROJECT_NAME> -> Remove project
+    pro open <PROJECT_NAME>   -> Open project in vscode
+    pro help                  -> Display this message"#);
+}
+
+fn main() {
+    let config = prepare_config(); 
+
+    let args: Vec<String> = std::env::args()
+        .skip(1)
+        .collect();
+
+    let str_args: Vec<&str> = args
+        .iter()
+        .map(|v| &v[..])
+        .collect();
+
+    let pr_dir = config.project_path.to_owned();
+
+    match str_args[..] {
+        ["list"]            => list_dir(&pr_dir),
+        ["open", pr_name]   => open_project(&pr_name.to_owned(), &pr_dir),
+        ["path", pr_name]   => get_project_path(&pr_name.to_owned(), &pr_dir),
+        ["create", pr_name] => create_project(&pr_name.to_owned(), &pr_dir),
+        ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
+        ["help"]            => display_help_message(),
+        _                   => println!("Unknown args")
     }
 }
