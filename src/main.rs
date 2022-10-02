@@ -44,7 +44,7 @@ fn list_dir(dir_url: &String) {
         .iter()
         .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
 
-    get_projects(dir_url).into_iter().for_each(|f| {
+    projects.into_iter().for_each(|f| {
         let project_type = get_project_language(&f, dir_url);
         if project_type.is_some() {
             let space_count = max_len_pr - f.len();
