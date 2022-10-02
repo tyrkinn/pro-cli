@@ -22,7 +22,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-fn get_projects(dir_url: &String) -> Vec<std::string::String> {
+fn get_projects(dir_url: &str) -> Vec<std::string::String> {
     let dirs = fs::read_dir(dir_url).unwrap();
     dirs.filter_map(|f| f.ok())
         .filter(|f| f.file_type().unwrap().is_dir() && !is_hidden(f))
@@ -39,12 +39,23 @@ fn remove_project(project_name: &String, dir_url: &String) {
 }
 
 fn list_dir(dir_url: &String) {
+    let projects = get_projects(dir_url);
+    let max_len_pr = projects
+        .iter()
+        .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
+
     get_projects(dir_url).into_iter().for_each(|f| {
         let project_type = get_project_language(&f, dir_url);
         if project_type.is_some() {
-            println!("{} - {:?}", f, project_type.unwrap());
+            let space_count = max_len_pr - f.len();
+            println!(
+                "\t{} {} - {:?}",
+                f,
+                " ".repeat(space_count),
+                project_type.unwrap()
+            );
         } else {
-            println!("{}", f);
+            println!("\t{}", f);
         }
     })
 }
