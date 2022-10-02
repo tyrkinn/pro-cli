@@ -11,6 +11,7 @@ enum ProjectType {
     Typescript,
     Rust,
     Elixir,
+    Clojure,
 }
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -78,6 +79,8 @@ fn get_project_language(project_name: &String, projects_dir: &String) -> Option<
         ("tsconfig.json", ProjectType::Typescript),
         ("Cargo.toml", ProjectType::Rust),
         ("mix.exs", ProjectType::Elixir),
+        ("deps.edn", ProjectType::Clojure),
+        ("project.clj", ProjectType::Clojure),
     ]);
     let project_full_path: String = format!("{}/{}", projects_dir, project_name);
     let project_files = fs::read_dir(project_full_path)
@@ -96,7 +99,7 @@ fn prepare_config() -> ProConfig {
     if !config::file_exists(config::config_path()) {
         let projects_path = config::at_home("projects");
         let default_config = ProConfig {
-            project_path: projects_path.to_owned() 
+            project_path: projects_path.to_owned(),
         };
         config::create_config_file();
         config::write_config(&default_config);
@@ -108,38 +111,34 @@ fn prepare_config() -> ProConfig {
 }
 
 fn display_help_message() {
-    println!(r#"
+    println!(
+        r#"
 Usage:
-  
     pro list                  -> List projects
     pro create <PROJECT_NAME> -> Create project
     pro path <PROJECT_NAME>   -> Get full project path
     pro remove <PROJECT_NAME> -> Remove project
     pro open <PROJECT_NAME>   -> Open project in vscode
-    pro help                  -> Display this message"#);
+    pro help                  -> Display this message"#
+    );
 }
 
 fn main() {
-    let config = prepare_config(); 
+    let config = prepare_config();
 
-    let args: Vec<String> = std::env::args()
-        .skip(1)
-        .collect();
+    let args: Vec<String> = std::env::args().skip(1).collect();
 
-    let str_args: Vec<&str> = args
-        .iter()
-        .map(|v| &v[..])
-        .collect();
+    let str_args: Vec<&str> = args.iter().map(|v| &v[..]).collect();
 
     let pr_dir = config.project_path.to_owned();
 
     match str_args[..] {
-        ["list"]            => list_dir(&pr_dir),
-        ["open", pr_name]   => open_project(&pr_name.to_owned(), &pr_dir),
-        ["path", pr_name]   => get_project_path(&pr_name.to_owned(), &pr_dir),
+        ["list"] => list_dir(&pr_dir),
+        ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir),
+        ["path", pr_name] => get_project_path(&pr_name.to_owned(), &pr_dir),
         ["create", pr_name] => create_project(&pr_name.to_owned(), &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
-        ["help"]            => display_help_message(),
-        _                   => println!("Unknown args")
+        ["help"] => display_help_message(),
+        _ => println!("Run `pro help` to get usage info"),
     }
 }
