@@ -12,6 +12,7 @@ enum ProjectType {
     Rust,
     Elixir,
     Clojure,
+    ClojureScript,
 }
 
 fn is_hidden(entry: &DirEntry) -> bool {
@@ -92,6 +93,7 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
         ("mix.exs", ProjectType::Elixir),
         ("deps.edn", ProjectType::Clojure),
         ("project.clj", ProjectType::Clojure),
+        ("shadow-cljs.edn", ProjectType::ClojureScript),
     ]);
     let project_full_path: String = format!("{}/{}", projects_dir, project_name);
     let project_files = fs::read_dir(project_full_path)
