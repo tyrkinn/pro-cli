@@ -60,7 +60,7 @@ fn list_dir(dir_url: &String) {
     })
 }
 
-fn open_project(project_name: &String, dir_url: &String) {
+fn open_project(project_name: &String, dir_url: &str) {
     if get_projects(dir_url).contains(project_name) {
         process::Command::new("code")
             .arg("-r")
@@ -72,7 +72,7 @@ fn open_project(project_name: &String, dir_url: &String) {
     }
 }
 
-fn create_project(project_name: &String, dir_url: &String) {
+fn create_project(project_name: &str, dir_url: &str) {
     process::Command::new("pnpx")
         .arg("degit")
         .arg("tyrkinn/frontend-templates/chakra-jotai-vitest")
@@ -81,11 +81,11 @@ fn create_project(project_name: &String, dir_url: &String) {
         .expect("Error occured while creating project");
 }
 
-fn get_project_path(project_name: &String, projects_dir: &String) {
+fn get_project_path(project_name: &str, projects_dir: &str) {
     println!("{}/{}", projects_dir, project_name);
 }
 
-fn get_project_language(project_name: &String, projects_dir: &String) -> Option<ProjectType> {
+fn get_project_language(project_name: &str, projects_dir: &str) -> Option<ProjectType> {
     let projects_hashmap: HashMap<&str, ProjectType> = HashMap::from([
         ("tsconfig.json", ProjectType::Typescript),
         ("Cargo.toml", ProjectType::Rust),
