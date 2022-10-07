@@ -3,9 +3,17 @@ name = "pro"
 version = "0.1.0"
 edition = "2021"
 
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = 'abort'
+strip = true
+
 [dependencies]
 home = "0.5.3"
 run_shell = "0.1.4"
 serde_derive = "1.0.145"
 serde = "1.0.145"
 toml = "0.5.9"
+colored = "2.0.0"

@@ -5,6 +5,7 @@ use std::{
     collections::HashMap,
     fs::{self, DirEntry},
 };
+use colored::Colorize;
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
@@ -46,17 +47,25 @@ fn list_dir(dir_url: &String) {
         .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
 
     projects.into_iter().for_each(|f| {
+        use ProjectType::*;
         let project_type = get_project_language(&f, dir_url);
-        if project_type.is_some() {
+        if let Some(pr_type) = project_type {
             let space_count = max_len_pr - f.len();
+            let colored_pr_type = match pr_type { 
+                Typescript    => format!("{:?}", pr_type).blue(),
+                Rust          => format!("{:?}", pr_type).red(),
+                Elixir        => format!("{:?}", pr_type).purple(),
+                Clojure       => format!("{:?}", pr_type).green(),
+                ClojureScript => format!("{:?}", pr_type).green()
+            };
             println!(
-                "\t{} {} - {:?}",
-                f,
+                "\t{} {} - {}",
+                format!("{}", f).bold(),
                 " ".repeat(space_count),
-                project_type.unwrap()
+                colored_pr_type
             );
         } else {
-            println!("\t{}", f);
+            println!("\t{}", format!("{}", f).bold());
         }
     })
 }
