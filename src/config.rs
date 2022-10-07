@@ -20,14 +20,14 @@ fn home_dir() -> String {
 
 pub fn at_home(subpath: &str) -> String {
     let home_path = home_dir();
-    return format!("{}/{}", home_path, subpath);
+    format!("{}/{}", home_path, subpath)
 }
 
 
 pub fn file_exists(filepath: String) -> bool {
     let ref_path: &str = filepath.as_ref();
     let path = Path::new(ref_path);
-    return path.exists();
+    path.exists()
 }
 
 pub fn config_path() -> String { at_home(".config/pro/config.toml") }
@@ -57,5 +57,5 @@ pub fn read_config() -> ProConfig {
         .expect("Can't read config file");
     let config: ProConfig = toml::from_str(file_contents.as_ref())
         .expect("Can't deserialize config file contents");
-    return config;
+    config
 }

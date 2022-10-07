@@ -20,7 +20,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s.starts_with("."))
+        .map(|s| s.starts_with('.'))
         .unwrap_or(false)
 }
 
@@ -40,7 +40,7 @@ fn remove_project(project_name: &String, dir_url: &String) {
         .expect("Cannot remove project with given name");
 }
 
-fn list_dir(dir_url: &String) {
+fn list_dir(dir_url: &str) {
     let projects = get_projects(dir_url);
     let max_len_pr = projects
         .iter()
@@ -60,12 +60,12 @@ fn list_dir(dir_url: &String) {
             };
             println!(
                 "\t{} {} - {}",
-                format!("{}", f).bold(),
+                f.bold(),
                 " ".repeat(space_count),
                 colored_pr_type
             );
         } else {
-            println!("\t{}", format!("{}", f).bold());
+            println!("\t{}", f.bold());
         }
     })
 }
@@ -109,12 +109,13 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
         .unwrap()
         .map(|x| x.unwrap().file_name().into_string().unwrap())
         .collect::<Vec<String>>();
+
     for &key in projects_hashmap.keys() {
         if project_files.contains(&key.to_owned()) {
             return Some(projects_hashmap[key]);
         }
     }
-    return None;
+    None
 }
 
 fn prepare_config() -> ProConfig {
@@ -126,9 +127,9 @@ fn prepare_config() -> ProConfig {
         config::create_config_file();
         config::write_config(&default_config);
         fs::create_dir_all(projects_path).expect("Can't create projects dir");
-        return default_config;
+        default_config
     } else {
-        return config::read_config();
+        config::read_config()
     }
 }
 
@@ -152,13 +153,13 @@ fn main() {
 
     let str_args: Vec<&str> = args.iter().map(|v| &v[..]).collect();
 
-    let pr_dir = config.project_path.to_owned();
+    let pr_dir = config.project_path;
 
     match str_args[..] {
         ["list"] => list_dir(&pr_dir),
         ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir),
-        ["path", pr_name] => get_project_path(&pr_name.to_owned(), &pr_dir),
-        ["create", pr_name] => create_project(&pr_name.to_owned(), &pr_dir),
+        ["path", pr_name] => get_project_path(pr_name, &pr_dir),
+        ["create", pr_name] => create_project(pr_name, &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
         ["help"] => display_help_message(),
         _ => println!("Run `pro help` to get usage info"),
