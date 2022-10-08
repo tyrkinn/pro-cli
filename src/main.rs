@@ -1,11 +1,11 @@
 pub mod config;
+use colored::Colorize;
 use config::ProConfig;
 use std::process::{self, exit};
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
 };
-use colored::Colorize;
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
@@ -51,12 +51,12 @@ fn list_dir(dir_url: &str) {
         let project_type = get_project_language(&f, dir_url);
         if let Some(pr_type) = project_type {
             let space_count = max_len_pr - f.len();
-            let colored_pr_type = match pr_type { 
-                Typescript    => format!("{:?}", pr_type).blue(),
-                Rust          => format!("{:?}", pr_type).red(),
-                Elixir        => format!("{:?}", pr_type).purple(),
-                Clojure       => format!("{:?}", pr_type).green(),
-                ClojureScript => format!("{:?}", pr_type).green()
+            let colored_pr_type = match pr_type {
+                Typescript => format!("{:?}", pr_type).blue(),
+                Rust => format!("{:?}", pr_type).red(),
+                Elixir => format!("{:?}", pr_type).purple(),
+                Clojure => format!("{:?}", pr_type).green(),
+                ClojureScript => format!("{:?}", pr_type).green(),
             };
             println!(
                 "\t{} {} - {}",
@@ -72,16 +72,13 @@ fn list_dir(dir_url: &str) {
 
 fn open_project(project_name: &String, dir_url: &str, code_editor: &str) {
     if get_projects(dir_url).contains(project_name) {
-        match process::Command::new(code_editor)
-                .arg(format!("{}/{}", dir_url, project_name))
-                .output()
-        {
-                    Ok(..) => {},
-                    Err(..) => {
-                        eprintln!("Can't open project {} with {}", project_name, code_editor);
-                        exit(1);
-                    },
-        }
+
+        process::Command::new(code_editor)
+            .current_dir(format!("{}/{}", dir_url, project_name))
+            .arg(".")
+            .output()
+            .expect("Can't open folder in code editor");
+
     } else {
         println!("Project with provided name does not exists");
     }
@@ -128,7 +125,7 @@ fn prepare_config() -> ProConfig {
         let projects_path = config::at_home("projects");
         let default_config = ProConfig {
             project_path: projects_path.to_owned(),
-            code_editor: "neovide".to_string()
+            code_editor: "neovide".to_string(),
         };
         config::create_config_file();
         config::write_config(&default_config);
