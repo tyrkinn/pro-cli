@@ -7,7 +7,8 @@ use toml;
 
 #[derive(Deserialize, Serialize)]
 pub struct ProConfig {
-    pub project_path: String
+    pub project_path: String,
+    pub code_editor: String,
 }
 
 fn home_dir() -> String {

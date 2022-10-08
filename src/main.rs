@@ -1,6 +1,6 @@
 pub mod config;
 use config::ProConfig;
-use std::process;
+use std::process::{self, exit};
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
@@ -70,13 +70,18 @@ fn list_dir(dir_url: &str) {
     })
 }
 
-fn open_project(project_name: &String, dir_url: &str) {
+fn open_project(project_name: &String, dir_url: &str, code_editor: &str) {
     if get_projects(dir_url).contains(project_name) {
-        process::Command::new("code")
-            .arg("-r")
-            .arg(format!("{}/{}", dir_url, project_name))
-            .output()
-            .expect("Error");
+        match process::Command::new(code_editor)
+                .arg(format!("{}/{}", dir_url, project_name))
+                .output()
+        {
+                    Ok(..) => {},
+                    Err(..) => {
+                        eprintln!("Can't open project {} with {}", project_name, code_editor);
+                        exit(1);
+                    },
+        }
     } else {
         println!("Project with provided name does not exists");
     }
@@ -123,6 +128,7 @@ fn prepare_config() -> ProConfig {
         let projects_path = config::at_home("projects");
         let default_config = ProConfig {
             project_path: projects_path.to_owned(),
+            code_editor: "neovide".to_string()
         };
         config::create_config_file();
         config::write_config(&default_config);
@@ -157,7 +163,7 @@ fn main() {
 
     match str_args[..] {
         ["list"] => list_dir(&pr_dir),
-        ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir),
+        ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir, &config.code_editor),
         ["path", pr_name] => get_project_path(pr_name, &pr_dir),
         ["create", pr_name] => create_project(pr_name, &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
