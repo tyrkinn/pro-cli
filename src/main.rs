@@ -1,7 +1,7 @@
 pub mod config;
 use colored::Colorize;
 use config::ProConfig;
-use std::process::{self, exit};
+use std::process::Command;
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
@@ -33,7 +33,7 @@ fn get_projects(dir_url: &str) -> Vec<std::string::String> {
 }
 
 fn remove_project(project_name: &String, dir_url: &String) {
-    process::Command::new("rm")
+    Command::new("rm")
         .arg("-rf")
         .arg(format!("{}/{}", dir_url, project_name))
         .output()
@@ -72,20 +72,18 @@ fn list_dir(dir_url: &str) {
 
 fn open_project(project_name: &String, dir_url: &str, code_editor: &str) {
     if get_projects(dir_url).contains(project_name) {
-
-        process::Command::new(code_editor)
+        Command::new(code_editor)
             .current_dir(format!("{}/{}", dir_url, project_name))
             .arg(".")
             .output()
             .expect("Can't open folder in code editor");
-
     } else {
         println!("Project with provided name does not exists");
     }
 }
 
 fn create_project(project_name: &str, dir_url: &str) {
-    process::Command::new("pnpx")
+    Command::new("pnpx")
         .arg("degit")
         .arg("tyrkinn/frontend-templates/chakra-jotai-vitest")
         .arg(format!("{}/{}", dir_url, project_name))
