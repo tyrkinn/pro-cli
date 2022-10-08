@@ -75,6 +75,7 @@ fn open_project(project_name: &String, dir_url: &str, code_editor: &str) {
         Command::new(code_editor)
             .current_dir(format!("{}/{}", dir_url, project_name))
             .arg(".")
+            .arg(if code_editor == "neovide" { "--maximized" } else { "" })
             .output()
             .expect("Can't open folder in code editor");
     } else {
