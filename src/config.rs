@@ -12,6 +12,7 @@ use toml;
 pub struct ProConfig {
     pub project_path: String,
     pub code_editor: String,
+    pub editor_flags: Vec<String> 
 }
 
 fn home_dir() -> String {

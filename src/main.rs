@@ -70,12 +70,12 @@ fn list_dir(dir_url: &str) {
     })
 }
 
-fn open_project(project_name: &String, dir_url: &str, code_editor: &str) {
+fn open_project(project_name: &String, dir_url: &str, code_editor: &str, editor_flags: Vec<String>) {
     if get_projects(dir_url).contains(project_name) {
         Command::new(code_editor)
             .current_dir(format!("{}/{}", dir_url, project_name))
             .arg(".")
-            .arg(if code_editor == "neovide" { "--maximized" } else { "" })
+            .args(editor_flags)
             .output()
             .expect("Can't open folder in code editor");
     } else {
@@ -125,6 +125,7 @@ fn prepare_config() -> ProConfig {
         let default_config = ProConfig {
             project_path: projects_path.to_owned(),
             code_editor: "neovide".to_string(),
+            editor_flags: Vec::new()
         };
         config::create_config_file();
         config::write_config(&default_config);
@@ -159,7 +160,7 @@ fn main() {
 
     match str_args[..] {
         ["list"] => list_dir(&pr_dir),
-        ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir, &config.code_editor),
+        ["open", pr_name] => open_project(&pr_name.to_owned(), &pr_dir, &config.code_editor, config.editor_flags),
         ["path", pr_name] => get_project_path(pr_name, &pr_dir),
         ["create", pr_name] => create_project(pr_name, &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
