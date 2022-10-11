@@ -1,7 +1,7 @@
 pub mod config;
 use colored::Colorize;
 use config::ProConfig;
-use std::process::Command;
+use std::process::{exit, Command};
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
@@ -33,11 +33,19 @@ fn get_projects(dir_url: &str) -> Vec<std::string::String> {
 }
 
 fn remove_project(project_name: &String, dir_url: &String) {
-    Command::new("rm")
+    
+    let result = Command::new("rm")
         .arg("-rf")
         .arg(format!("{}/{}", dir_url, project_name))
-        .output()
-        .expect("Cannot remove project with given name");
+        .output();
+
+    match result {
+        Ok(..) => {},
+        Err(e) => {
+            eprintln!("Can't remove {} because of {}", project_name, e);
+            exit(1);
+        }
+    }
 }
 
 fn list_dir(dir_url: &str) {
@@ -72,24 +80,38 @@ fn list_dir(dir_url: &str) {
 
 fn open_project(project_name: &String, dir_url: &str, code_editor: &str, editor_flags: Vec<String>) {
     if get_projects(dir_url).contains(project_name) {
-        Command::new(code_editor)
+        let result = Command::new(code_editor)
             .current_dir(format!("{}/{}", dir_url, project_name))
             .arg(".")
             .args(editor_flags)
-            .output()
-            .expect("Can't open folder in code editor");
+            .output();
+
+        match result {
+            Ok(..) => {},
+            Err(e) => {
+                eprintln!("Can't open project '{}' in editor because of {}", project_name, e);
+                exit(1);
+            }
+        }
     } else {
         println!("Project with provided name does not exists");
     }
 }
 
 fn create_project(project_name: &str, dir_url: &str) {
-    Command::new("pnpx")
+    let result = Command::new("pnpx")
         .arg("degit")
         .arg("tyrkinn/frontend-templates/chakra-jotai-vitest")
         .arg(format!("{}/{}", dir_url, project_name))
-        .output()
-        .expect("Error occured while creating project");
+        .output();
+
+    match result {
+        Ok(..) => {},
+        Err(e) => {
+            eprintln!("Can't create project '{}' because of {}", project_name, e);
+            exit(1)
+        }
+    }
 }
 
 fn get_project_path(project_name: &str, projects_dir: &str) {
@@ -129,7 +151,13 @@ fn prepare_config() -> ProConfig {
         };
         config::create_config_file();
         config::write_config(&default_config);
-        fs::create_dir_all(projects_path).expect("Can't create projects dir");
+        match fs::create_dir_all(projects_path) {
+            Ok(..) => {},
+            Err(e) => {
+                eprintln!("Can't create config dir because of {}", e);
+                exit(1)
+            }
+        }
         default_config
     } else {
         config::read_config()
