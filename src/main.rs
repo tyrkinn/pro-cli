@@ -40,7 +40,9 @@ fn remove_project(project_name: &String, dir_url: &String) {
         .output();
 
     match result {
-        Ok(..) => {},
+        Ok(..) => {
+            println!("Project {} succesfully removed", project_name);
+        },
         Err(e) => {
             eprintln!("Can't remove {} because of {}", project_name, e);
             exit(1);
