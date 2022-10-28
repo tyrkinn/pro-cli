@@ -148,6 +148,16 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
     None
 }
 
+fn create_project_dir(project_dir: &str) {
+    match fs::create_dir_all(project_dir) {
+        Ok(..) => {}
+        Err(e) => {
+            eprintln!("Can't create config dir because of {}", e);
+            exit(1)
+        }
+    }
+}
+
 fn prepare_config() -> ProConfig {
     if !config::file_exists(config::config_path()) {
         let projects_path = config::at_home("projects");
@@ -158,13 +168,7 @@ fn prepare_config() -> ProConfig {
         };
         config::create_config_file();
         config::write_config(&default_config);
-        match fs::create_dir_all(projects_path) {
-            Ok(..) => {}
-            Err(e) => {
-                eprintln!("Can't create config dir because of {}", e);
-                exit(1)
-            }
-        }
+        create_project_dir(&projects_path);
         default_config
     } else {
         config::read_config()
