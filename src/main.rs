@@ -158,18 +158,22 @@ fn create_project_dir(project_dir: &str) {
     }
 }
 
+fn create_default_config(projects_dir: &str) -> ProConfig {
+    let default_config = ProConfig {
+        project_path: projects_dir.to_owned(),
+        code_editor: "neovide".to_string(),
+        editor_flags: Vec::new(),
+    };
+    config::create_config_file();
+    config::write_config(&default_config);
+    default_config
+}
+
 fn prepare_config() -> ProConfig {
     if !config::file_exists(config::config_path()) {
         let projects_path = config::at_home("projects");
-        let default_config = ProConfig {
-            project_path: projects_path.to_owned(),
-            code_editor: "neovide".to_string(),
-            editor_flags: Vec::new(),
-        };
-        config::create_config_file();
-        config::write_config(&default_config);
         create_project_dir(&projects_path);
-        default_config
+        create_default_config(&projects_path)
     } else {
         config::read_config()
     }
