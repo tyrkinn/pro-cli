@@ -41,7 +41,7 @@ fn remove_project(project_name: &String, dir_url: &String) {
     match result {
         Ok(..) => println!("Project {} succesfully removed", project_name),
         Err(e) => {
-            eprintln!("Can't remove {} because of {}", project_name, e);
+            eprintln!("Can't remove {} because of:\n{}", project_name, e);
             exit(1);
         }
     }
@@ -106,16 +106,13 @@ fn open_project(
             .args(editor_flags)
             .output();
 
-        match result {
-            Ok(..) => {}
-            Err(e) => {
-                eprintln!(
-                    "Can't open project '{}' in editor because of {}",
-                    project_name, e
-                );
-                exit(1);
-            }
-        }
+        result.unwrap_or_else(|e| {
+            eprintln!(
+                "Can't open project '{}' in editor because of:\n{}",
+                project_name, e
+            );
+            exit(1);
+        });
     } else {
         println!("Project with provided name does not exists");
     }
@@ -128,13 +125,10 @@ fn create_project(project_name: &str, dir_url: &str) {
         .arg(format!("{}/{}", dir_url, project_name))
         .output();
 
-    match result {
-        Ok(..) => {}
-        Err(e) => {
-            eprintln!("Can't create project '{}' because of {}", project_name, e);
-            exit(1)
-        }
-    }
+    result.unwrap_or_else(|e| {
+        eprintln!("Can't create project '{}' because of:\n{}", project_name, e);
+        exit(1);
+    });
 }
 
 fn get_project_path(project_name: &str, projects_dir: &str) -> String {
@@ -169,13 +163,10 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
 }
 
 fn create_project_dir(project_dir: &str) {
-    match fs::create_dir_all(project_dir) {
-        Ok(..) => {}
-        Err(e) => {
-            eprintln!("Can't create config dir because of {}", e);
-            exit(1)
-        }
-    }
+    fs::create_dir_all(project_dir).unwrap_or_else(|e| {
+        eprintln!("Can't create config dir because of:\n{}", e);
+        exit(1)
+    });
 }
 
 fn create_default_config(projects_dir: &str) -> ProConfig {
