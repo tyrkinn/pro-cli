@@ -12,7 +12,7 @@ use toml;
 pub struct ProConfig {
     pub project_path: String,
     pub code_editor: String,
-    pub editor_flags: Vec<String> 
+    pub editor_flags: Vec<String>,
 }
 
 fn home_dir() -> String {
@@ -40,7 +40,7 @@ pub fn create_config_file() {
     let config_path = Path::new(config_path_string);
     let prefix = config_path.parent().unwrap();
     fs::create_dir_all(prefix).expect("Can't create prefix folder");
-    let _f = File::create(config_path).expect("Can't create config file");
+    File::create(config_path).expect("Can't create config file");
 }
 
 pub fn write_config(config: &ProConfig) {
