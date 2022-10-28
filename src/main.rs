@@ -1,5 +1,5 @@
 pub mod config;
-use colored::Colorize;
+use colored::{ColoredString, Colorize};
 use config::ProConfig;
 use std::process::{exit, Command};
 use std::{
@@ -47,6 +47,40 @@ fn remove_project(project_name: &String, dir_url: &String) {
     }
 }
 
+fn pr_type_to_str(pr_type: ProjectType) -> ColoredString {
+    use ProjectType::*;
+    match pr_type {
+        Typescript => format!("{:?}", pr_type).blue(),
+        Rust => format!("{:?}", pr_type).red(),
+        Elixir => format!("{:?}", pr_type).purple(),
+        Clojure => format!("{:?}", pr_type).green(),
+        ClojureScript => format!("{:?}", pr_type).green(),
+    }
+}
+
+fn format_typed_pr(pr_name: &str, space_count: usize, str_pr_type: ColoredString) -> String {
+    format!(
+        "\t{} {} - {}",
+        pr_name.bold(),
+        " ".repeat(space_count),
+        str_pr_type
+    )
+}
+
+fn format_untyped_pr(pr_name: &str) -> String {
+    format!("\t{}", pr_name.bold())
+}
+
+fn proj_to_str(pr_name: &str, space_count: usize, project_type: Option<ProjectType>) -> String {
+    match project_type {
+        Some(pr_type) => {
+            let str_pr_type = pr_type_to_str(pr_type);
+            format_typed_pr(pr_name, space_count, str_pr_type)
+        }
+        None => format_untyped_pr(pr_name),
+    }
+}
+
 fn list_dir(dir_url: &str) {
     let projects = get_projects(dir_url);
     let max_len_pr = projects
@@ -54,26 +88,8 @@ fn list_dir(dir_url: &str) {
         .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
 
     projects.into_iter().for_each(|f| {
-        use ProjectType::*;
         let project_type = get_project_language(&f, dir_url);
-        if let Some(pr_type) = project_type {
-            let space_count = max_len_pr - f.len();
-            let colored_pr_type = match pr_type {
-                Typescript => format!("{:?}", pr_type).blue(),
-                Rust => format!("{:?}", pr_type).red(),
-                Elixir => format!("{:?}", pr_type).purple(),
-                Clojure => format!("{:?}", pr_type).green(),
-                ClojureScript => format!("{:?}", pr_type).green(),
-            };
-            println!(
-                "\t{} {} - {}",
-                f.bold(),
-                " ".repeat(space_count),
-                colored_pr_type
-            );
-        } else {
-            println!("\t{}", f.bold());
-        }
+        println!("{}", proj_to_str(&f, max_len_pr - f.len(), project_type))
     })
 }
 
@@ -121,8 +137,15 @@ fn create_project(project_name: &str, dir_url: &str) {
     }
 }
 
-fn get_project_path(project_name: &str, projects_dir: &str) {
-    println!("{}/{}", projects_dir, project_name);
+fn get_project_path(project_name: &str, projects_dir: &str) -> String {
+    format!("{}/{}", projects_dir, project_name)
+}
+
+fn read_dir_files(dir_path: &str) -> Vec<String> {
+    fs::read_dir(dir_path)
+        .unwrap()
+        .map(|x| x.unwrap().file_name().into_string().unwrap())
+        .collect()
 }
 
 fn get_project_language(project_name: &str, projects_dir: &str) -> Option<ProjectType> {
@@ -134,11 +157,8 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
         ("project.clj", ProjectType::Clojure),
         ("shadow-cljs.edn", ProjectType::ClojureScript),
     ]);
-    let project_full_path: String = format!("{}/{}", projects_dir, project_name);
-    let project_files = fs::read_dir(project_full_path)
-        .unwrap()
-        .map(|x| x.unwrap().file_name().into_string().unwrap())
-        .collect::<Vec<String>>();
+    let project_full_path: String = get_project_path(&project_name, &projects_dir);
+    let project_files = read_dir_files(&project_full_path);
 
     for &key in projects_hashmap.keys() {
         if project_files.contains(&key.to_owned()) {
@@ -209,7 +229,7 @@ fn main() {
             &config.code_editor,
             config.editor_flags,
         ),
-        ["path", pr_name] => get_project_path(pr_name, &pr_dir),
+        ["path", pr_name] => println!("{}", get_project_path(pr_name, &pr_dir)),
         ["create", pr_name] => create_project(pr_name, &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
         ["help"] => display_help_message(),
