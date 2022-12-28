@@ -126,8 +126,8 @@ fn create_project(project_name: &str, dir_url: &str) {
         .output();
 
     result.unwrap_or_else(|e| {
-        eprintln!("Can't create project '{}' because of:\n{}", project_name, e);
-        exit(1);
+        eprintln!("Can't create project '{}' because of {}", project_name, e);
+        exit(1)
     });
 }
 
@@ -193,6 +193,8 @@ fn prepare_config() -> ProConfig {
 fn display_help_message() {
     println!(
         r#"
+Pro CLI v0.1.0
+
 Usage:
     pro list                  -> List projects
     pro create <PROJECT_NAME> -> Create project
@@ -214,6 +216,7 @@ fn main() {
 
     match str_args[..] {
         ["list"] => list_dir(&pr_dir),
+        ["version"] => println!("Pro CLI\nVersion: {}", env!("CARGO_PKG_VERSION")),
         ["open", pr_name] => open_project(
             &pr_name.to_owned(),
             &pr_dir,
