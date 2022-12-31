@@ -24,7 +24,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-fn get_projects(dir_url: &str) -> Vec<std::string::String> {
+fn get_projects(dir_url: &str) -> Vec<String> {
     let dirs = fs::read_dir(dir_url).unwrap();
     dirs.filter_map(|f| f.ok())
         .filter(|f| f.file_type().unwrap().is_dir() && !is_hidden(f))
@@ -81,6 +81,46 @@ fn proj_to_str(pr_name: &str, space_count: usize, project_type: Option<ProjectTy
     }
 }
 
+fn gen_comps(project_dir: &str) {
+    let comp = format!(
+        r#"
+_pro() {{
+    local line state
+
+    _arguments -C \
+               "1: :->cmds" \
+               "*::arg:->args"
+    case "$state" in
+        cmds)
+            _values "pro command" \
+                    "list[list all projects in project directory]" \
+                    "create[create new project from template]" \
+                    "open[open project in editor]" \
+                    "remove[rm -rf directory]"  \
+                    "path[get full project path]" \
+                    "help[display help message]" \
+                    "version[display version]" \
+            ;;
+        args)
+            case $line[1] in
+                path | remove | open)
+                    _select_project_cmd
+                    ;;
+            esac
+            ;;
+    esac
+}}
+_select_project_cmd() {{
+     local oomph_dirs oomph_dirs=(-/ {})
+     _files -W oomph_dirs -g '*'
+}}
+compdef _pro pro
+"#,
+        project_dir
+    );
+    println!("{}", comp);
+}
+
 fn list_dir(dir_url: &str) {
     let projects = get_projects(dir_url);
     let max_len_pr = projects
@@ -93,29 +133,29 @@ fn list_dir(dir_url: &str) {
     })
 }
 
-fn open_project(
-    project_name: &String,
-    dir_url: &str,
-    code_editor: &str,
-    editor_flags: Vec<String>,
-) {
-    if get_projects(dir_url).contains(project_name) {
-        let result = Command::new(code_editor)
-            .current_dir(format!("{}/{}", dir_url, project_name))
-            .arg(".")
-            .args(editor_flags)
-            .output();
-
-        result.unwrap_or_else(|e| {
-            eprintln!(
-                "Can't open project '{}' in editor because of:\n{}",
-                project_name, e
-            );
-            exit(1);
-        });
-    } else {
-        println!("Project with provided name does not exists");
+fn check_exists(project_dir: &str, project_name: &str) {
+    if !get_projects(project_dir).contains(&project_name.to_string()) {
+        eprintln!("Project with provided name does not exists");
+        std::process::exit(1);
     }
+}
+
+fn open_project(project_name: &str, dir_url: &str, code_editor: &str, editor_flags: Vec<String>) {
+    check_exists(dir_url, project_name);
+    let current_dir = format!("{}/{}", dir_url, project_name);
+    let result = Command::new(code_editor)
+        .current_dir(&current_dir) // For neovim to open project dir correctly
+        .arg(&current_dir)
+        .args(editor_flags)
+        .output();
+
+    result.unwrap_or_else(|e| {
+        eprintln!(
+            "Can't open project '{}' in editor because of:\n{}",
+            project_name, e
+        );
+        exit(1);
+    });
 }
 
 fn create_project(project_name: &str, dir_url: &str) {
@@ -196,12 +236,14 @@ fn display_help_message() {
 Pro CLI v0.1.0
 
 Usage:
+    pro version               -> Display Pro Cli version
     pro list                  -> List projects
     pro create <PROJECT_NAME> -> Create project
     pro path <PROJECT_NAME>   -> Get full project path
     pro remove <PROJECT_NAME> -> Remove project
     pro open <PROJECT_NAME>   -> Open project in vscode
-    pro help                  -> Display this message"#
+    pro help                  -> Display this message
+    pro comps                 -> Display zsh completions"#
     );
 }
 
@@ -227,6 +269,7 @@ fn main() {
         ["create", pr_name] => create_project(pr_name, &pr_dir),
         ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
         ["help"] => display_help_message(),
+        ["comps"] => gen_comps(&pr_dir),
         _ => println!("Run `pro help` to get usage info"),
     }
 }
