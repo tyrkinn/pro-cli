@@ -11,6 +11,7 @@ Simple cli for local project management
   $ pro path   <PROJECT_NAME> # Get project absolute path
   $ pro remove <PROJECT_NAME> # Remove project directory
   $ pro open   <PROJECT_NAME> # Open project in code editor
+  $ pro comps                 # Prints zsh comletions in stdout
 ```
 
 ## Configuration 
@@ -32,9 +33,9 @@ code_editor = "nvim"
 - [x] Bootstrap projects from template
 - [x] Deleting project folder
 - [x] Configuration in TOML file
-- [ ] User friendly installation
-- [ ] User friendly error messages
-- [ ] Command line autosuggestions for projects
+- [x] User friendly error messages
+- [x] Command line autosuggestions for projects
+- [ ] User friendly installation. Add to cargo repo
 
 
 
