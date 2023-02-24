@@ -1,4 +1,6 @@
 pub mod config;
+pub mod tui;
+pub mod website;
 use colored::{ColoredString, Colorize};
 use config::ProConfig;
 use std::process::{exit, Command};
@@ -121,16 +123,29 @@ compdef _pro pro
     println!("{}", comp);
 }
 
-fn list_dir(dir_url: &str) {
+fn list_dir(dir_url: &str, lang: Option<&str>) {
     let projects = get_projects(dir_url);
     let max_len_pr = projects
         .iter()
         .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
 
+    if let Some(lang_raw) = lang {
+        projects.into_iter().for_each(|f| {
+            let project_type = get_project_language(&f, dir_url);
+            if let Some(pr_type) = project_type {
+                let pr_type_str = format!("{pr_type:?}").to_lowercase();
+                if pr_type_str == lang_raw {
+                    println!("{}", proj_to_str(&f, max_len_pr - f.len(), project_type))
+                }
+            }
+        });
+        return;
+    }
+
     projects.into_iter().for_each(|f| {
         let project_type = get_project_language(&f, dir_url);
         println!("{}", proj_to_str(&f, max_len_pr - f.len(), project_type))
-    })
+    });
 }
 
 fn check_exists(project_dir: &str, project_name: &str) {
@@ -143,11 +158,18 @@ fn check_exists(project_dir: &str, project_name: &str) {
 fn open_project(project_name: &str, dir_url: &str, code_editor: &str, editor_flags: Vec<String>) {
     check_exists(dir_url, project_name);
     let current_dir = format!("{}/{}", dir_url, project_name);
-    let result = Command::new(code_editor)
-        .current_dir(&current_dir) // For neovim to open project dir correctly
-        .arg(&current_dir)
-        .args(editor_flags)
-        .output();
+    println!("{}", code_editor);
+
+    let mut cmd = &mut Command::new(code_editor);
+
+    cmd.current_dir(&current_dir) // For neovim to open project dir correctly
+        .arg(&current_dir);
+
+    for flag in editor_flags {
+        cmd = cmd.arg(flag);
+    }
+
+    let result = cmd.output();
 
     result.unwrap_or_else(|e| {
         eprintln!(
@@ -237,13 +259,14 @@ Pro CLI v0.1.0
 
 Usage:
     pro version               -> Display Pro Cli version
-    pro list                  -> List projects
+    pro list [-lang LANGUAGE] -> List projects (filter by language if `-lang` flag provided)
     pro create <PROJECT_NAME> -> Create project
     pro path <PROJECT_NAME>   -> Get full project path
     pro remove <PROJECT_NAME> -> Remove project
     pro open <PROJECT_NAME>   -> Open project in vscode
     pro help                  -> Display this message
-    pro comps                 -> Display zsh completions"#
+    pro comps                 -> Display zsh completions
+    pro tui                   -> TODO: TUI interface"#
     );
 }
 
@@ -252,12 +275,13 @@ fn main() {
 
     let args: Vec<String> = std::env::args().skip(1).collect();
 
-    let str_args: Vec<&str> = args.iter().map(|v| &v[..]).collect();
+    let str_args: Vec<&str> = args.iter().map(String::as_str).collect();
 
     let pr_dir = config.project_path;
 
     match str_args[..] {
-        ["list"] => list_dir(&pr_dir),
+        ["list"] => list_dir(&pr_dir, None),
+        ["list", "-lang", lang] => list_dir(&pr_dir, Some(lang)),
         ["version"] => println!("Pro CLI\nVersion: {}", env!("CARGO_PKG_VERSION")),
         ["open", pr_name] => open_project(
             &pr_name.to_owned(),
