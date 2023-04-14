@@ -8,6 +8,7 @@ use std::{
     collections::HashMap,
     fs::{self, DirEntry},
 };
+use crate::website::start_server;
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
@@ -34,19 +35,17 @@ fn get_projects(dir_url: &str) -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-fn remove_project(project_name: &String, dir_url: &String) {
-    let result = Command::new("rm")
+fn remove_project(project_name: &String, dir_url: &String) -> Result<(), ()> {
+    Command::new("rm")
         .arg("-rf")
         .arg(format!("{}/{}", dir_url, project_name))
-        .output();
-
-    match result {
-        Ok(..) => println!("Project {} succesfully removed", project_name),
-        Err(e) => {
+        .output()
+        .map_err(|e| {
             eprintln!("Can't remove {} because of:\n{}", project_name, e);
-            exit(1);
-        }
-    }
+        })?;
+
+    println!("Project {} succesfully removed", project_name);
+    Ok(())
 }
 
 fn pr_type_to_str(pr_type: ProjectType) -> ColoredString {
@@ -108,6 +107,10 @@ _pro() {{
                 path | remove | open)
                     _select_project_cmd
                     ;;
+                list)
+                    _arguments \
+                        "-lang[language]"
+                    ;;
             esac
             ;;
     esac
@@ -148,15 +151,22 @@ fn list_dir(dir_url: &str, lang: Option<&str>) {
     });
 }
 
-fn check_exists(project_dir: &str, project_name: &str) {
+fn check_exists(project_dir: &str, project_name: &str) -> Result<(), ()> {
     if !get_projects(project_dir).contains(&project_name.to_string()) {
         eprintln!("Project with provided name does not exists");
-        std::process::exit(1);
+        Err(())
+    } else {
+        Ok(())
     }
 }
 
-fn open_project(project_name: &str, dir_url: &str, code_editor: &str, editor_flags: Vec<String>) {
-    check_exists(dir_url, project_name);
+fn open_project(
+    project_name: &str,
+    dir_url: &str,
+    code_editor: &str,
+    editor_flags: Vec<String>,
+) -> Result<(), ()> {
+    check_exists(dir_url, project_name)?;
     let current_dir = format!("{}/{}", dir_url, project_name);
     println!("{}", code_editor);
 
@@ -169,15 +179,10 @@ fn open_project(project_name: &str, dir_url: &str, code_editor: &str, editor_fla
         cmd = cmd.arg(flag);
     }
 
-    let result = cmd.output();
+    cmd.output()
+        .map_err(|_| eprintln!("Error executing command"))?;
 
-    result.unwrap_or_else(|e| {
-        eprintln!(
-            "Can't open project '{}' in editor because of:\n{}",
-            project_name, e
-        );
-        exit(1);
-    });
+    Ok(())
 }
 
 fn create_project(project_name: &str, dir_url: &str) {
@@ -266,7 +271,8 @@ Usage:
     pro open <PROJECT_NAME>   -> Open project in vscode
     pro help                  -> Display this message
     pro comps                 -> Display zsh completions
-    pro tui                   -> TODO: TUI interface"#
+    pro tui                   -> TODO: TUI interface
+    pro serve                 -> TODO: start server"#
     );
 }
 
@@ -277,23 +283,27 @@ fn main() {
 
     let str_args: Vec<&str> = args.iter().map(String::as_str).collect();
 
-    let pr_dir = config.project_path;
+    let pr_dir = config.project_path.to_string();
 
     match str_args[..] {
         ["list"] => list_dir(&pr_dir, None),
         ["list", "-lang", lang] => list_dir(&pr_dir, Some(lang)),
         ["version"] => println!("Pro CLI\nVersion: {}", env!("CARGO_PKG_VERSION")),
         ["open", pr_name] => open_project(
-            &pr_name.to_owned(),
+            pr_name,
             &pr_dir,
             &config.code_editor,
             config.editor_flags,
-        ),
+        )
+        .unwrap(),
         ["path", pr_name] => println!("{}", get_project_path(pr_name, &pr_dir)),
         ["create", pr_name] => create_project(pr_name, &pr_dir),
-        ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir),
+        ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir).unwrap(),
         ["help"] => display_help_message(),
         ["comps"] => gen_comps(&pr_dir),
+        ["serve"] => {
+            start_server(config).unwrap();
+        }
         _ => println!("Run `pro help` to get usage info"),
     }
 }
