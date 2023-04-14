@@ -26,7 +26,7 @@ fn home_dir() -> String {
 
 pub fn at_home(subpath: &str) -> String {
     let home_path = home_dir();
-    format!("{}/{}", home_path, subpath)
+    format!("{home_path}/{subpath}")
 }
 
 pub fn file_exists(filepath: String) -> bool {
@@ -44,11 +44,11 @@ pub fn create_config_file() {
     let config_path = Path::new(config_path_string);
     let prefix = config_path.parent().unwrap();
     fs::create_dir_all(prefix).unwrap_or_else(|e| {
-        eprintln!("Can't create prefix folder because of:\n{}", e);
+        eprintln!("Can't create prefix folder because of:\n{e}");
         exit(1);
     });
     File::create(config_path).unwrap_or_else(|e| {
-        eprintln!("Can't create config because of:\n{}", e);
+        eprintln!("Can't create config because of:\n{e}");
         exit(1);
     });
 }
@@ -59,7 +59,7 @@ pub fn write_config(config: &ProConfig) {
         .open(config_path())
         .expect("Can't open config file");
     let default_toml_config = toml::to_string(config).unwrap_or_else(|e| {
-        eprintln!("Can't serialize `ProConfig` to toml because of:\n {}", e);
+        eprintln!("Can't serialize `ProConfig` to toml because of:\n {e}");
         exit(1);
     });
     write!(config_file, "{}", default_toml_config).expect("Can't write default config");
@@ -67,11 +67,11 @@ pub fn write_config(config: &ProConfig) {
 
 pub fn read_config() -> ProConfig {
     let file_contents = read_to_string(config_path()).unwrap_or_else(|e| {
-        eprintln!("Can't read config contents because of:\n{}", e);
+        eprintln!("Can't read config contents because of:\n{e}");
         exit(1);
     });
     let config: ProConfig = toml::from_str(file_contents.as_ref()).unwrap_or_else(|e| {
-        eprintln!("Can't deserialize config file content because of:\n{}", e);
+        eprintln!("Can't deserialize config file content because of:\n{e}");
         exit(1);
     });
     config
