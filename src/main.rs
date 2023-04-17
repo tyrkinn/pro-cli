@@ -1,14 +1,14 @@
 pub mod config;
 pub mod tui;
 pub mod website;
+use crate::website::start_server;
 use colored::{ColoredString, Colorize};
 use config::ProConfig;
-use std::process::{exit, Command};
+use std::process::Command;
 use std::{
     collections::HashMap,
     fs::{self, DirEntry},
 };
-use crate::website::start_server;
 
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
@@ -35,7 +35,7 @@ fn get_projects(dir_url: &str) -> Vec<String> {
         .collect::<Vec<String>>()
 }
 
-fn remove_project(project_name: &String, dir_url: &String) -> Result<(), ()> {
+fn remove_project(project_name: &str, dir_url: &str) -> Result<(), ()> {
     Command::new("rm")
         .arg("-rf")
         .arg(format!("{}/{}", dir_url, project_name))
@@ -51,11 +51,11 @@ fn remove_project(project_name: &String, dir_url: &String) -> Result<(), ()> {
 fn pr_type_to_str(pr_type: ProjectType) -> ColoredString {
     use ProjectType::*;
     match pr_type {
-        Typescript => format!("{:?}", pr_type).blue(),
-        Rust => format!("{:?}", pr_type).red(),
-        Elixir => format!("{:?}", pr_type).purple(),
-        Clojure => format!("{:?}", pr_type).green(),
-        ClojureScript => format!("{:?}", pr_type).green(),
+        Typescript => format!("{pr_type:?}").blue(),
+        Rust => format!("{pr_type:?}").red(),
+        Elixir => format!("{pr_type:?}").purple(),
+        Clojure => format!("{pr_type:?}").green(),
+        ClojureScript => format!("{pr_type:?}").green(),
     }
 }
 
@@ -116,24 +116,23 @@ _pro() {{
     esac
 }}
 _select_project_cmd() {{
-     local oomph_dirs oomph_dirs=(-/ {})
+     local oomph_dirs oomph_dirs=(-/ {project_dir})
      _files -W oomph_dirs -g '*'
 }}
 compdef _pro pro
-"#,
-        project_dir
+"#
     );
-    println!("{}", comp);
+    println!("{comp}");
 }
 
-fn list_dir(dir_url: &str, lang: Option<&str>) {
+fn list_dir(dir_url: &str, lang: Option<&str>) -> Result<(),()> {
     let projects = get_projects(dir_url);
     let max_len_pr = projects
         .iter()
         .fold(0, |acc, v| if v.len() > acc { v.len() } else { acc });
 
     if let Some(lang_raw) = lang {
-        projects.into_iter().for_each(|f| {
+        projects.clone().into_iter().for_each(|f| {
             let project_type = get_project_language(&f, dir_url);
             if let Some(pr_type) = project_type {
                 let pr_type_str = format!("{pr_type:?}").to_lowercase();
@@ -142,13 +141,14 @@ fn list_dir(dir_url: &str, lang: Option<&str>) {
                 }
             }
         });
-        return;
     }
 
     projects.into_iter().for_each(|f| {
         let project_type = get_project_language(&f, dir_url);
         println!("{}", proj_to_str(&f, max_len_pr - f.len(), project_type))
     });
+
+    Ok(())
 }
 
 fn check_exists(project_dir: &str, project_name: &str) -> Result<(), ()> {
@@ -167,8 +167,8 @@ fn open_project(
     editor_flags: Vec<String>,
 ) -> Result<(), ()> {
     check_exists(dir_url, project_name)?;
-    let current_dir = format!("{}/{}", dir_url, project_name);
-    println!("{}", code_editor);
+    let current_dir = format!("{dir_url}/{project_name}");
+    println!("{project_name}");
 
     let mut cmd = &mut Command::new(code_editor);
 
@@ -185,21 +185,21 @@ fn open_project(
     Ok(())
 }
 
-fn create_project(project_name: &str, dir_url: &str) {
+fn create_project(project_name: &str, dir_url: &str) -> Result<(),()> {
     let result = Command::new("pnpx")
         .arg("degit")
         .arg("tyrkinn/frontend-templates/chakra-jotai-vitest")
-        .arg(format!("{}/{}", dir_url, project_name))
+        .arg(format!("{dir_url}/{project_name}"))
         .output();
 
-    result.unwrap_or_else(|e| {
-        eprintln!("Can't create project '{}' because of {}", project_name, e);
-        exit(1)
-    });
+    result.map_err(|e| {
+        eprintln!("Can't create project '{project_name}' because of {e}");
+    })?;
+    Ok(())
 }
 
 fn get_project_path(project_name: &str, projects_dir: &str) -> String {
-    format!("{}/{}", projects_dir, project_name)
+    format!("{projects_dir}/{project_name}")
 }
 
 fn read_dir_files(dir_path: &str) -> Vec<String> {
@@ -218,7 +218,7 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
         ("project.clj", ProjectType::Clojure),
         ("shadow-cljs.edn", ProjectType::ClojureScript),
     ]);
-    let project_full_path: String = get_project_path(&project_name, &projects_dir);
+    let project_full_path: String = get_project_path(project_name, projects_dir);
     let project_files = read_dir_files(&project_full_path);
 
     for &key in projects_hashmap.keys() {
@@ -229,29 +229,30 @@ fn get_project_language(project_name: &str, projects_dir: &str) -> Option<Projec
     None
 }
 
-fn create_project_dir(project_dir: &str) {
-    fs::create_dir_all(project_dir).unwrap_or_else(|e| {
-        eprintln!("Can't create config dir because of:\n{}", e);
-        exit(1)
-    });
+fn create_project_dir(project_dir: &str) -> Result<(),()> {
+    fs::create_dir_all(project_dir).map_err(|e| {
+        eprintln!("Can't create config dir because of:\n{e}");
+    })?;
+    Ok(())
 }
 
-fn create_default_config(projects_dir: &str) -> ProConfig {
+fn create_default_config(projects_dir: &str) -> Result<ProConfig, ()> {
     let default_config = ProConfig {
         project_path: projects_dir.to_owned(),
         code_editor: "neovide".to_string(),
         editor_flags: Vec::new(),
     };
-    config::create_config_file();
-    config::write_config(&default_config);
-    default_config
+
+    config::create_config_file()?;
+    config::write_config(&default_config)?;
+    Ok(default_config)
 }
 
-fn prepare_config() -> ProConfig {
-    if !config::file_exists(config::config_path()) {
-        let projects_path = config::at_home("projects");
-        create_project_dir(&projects_path);
-        create_default_config(&projects_path)
+fn prepare_config() -> Result<ProConfig, ()> {
+    if !config::file_exists(config::config_path()?) {
+        let projects_path = config::at_home("projects")?;
+        create_project_dir(&projects_path)?;
+        Ok(create_default_config(&projects_path)?)
     } else {
         config::read_config()
     }
@@ -259,8 +260,7 @@ fn prepare_config() -> ProConfig {
 
 fn display_help_message() {
     println!(
-        r#"
-Pro CLI v0.1.0
+        r#"Pro CLI v0.1.0
 
 Usage:
     pro version               -> Display Pro Cli version
@@ -276,8 +276,8 @@ Usage:
     );
 }
 
-fn main() {
-    let config = prepare_config();
+fn main() -> Result<(),()> {
+    let config = prepare_config()?;
 
     let args: Vec<String> = std::env::args().skip(1).collect();
 
@@ -286,24 +286,21 @@ fn main() {
     let pr_dir = config.project_path.to_string();
 
     match str_args[..] {
-        ["list"] => list_dir(&pr_dir, None),
-        ["list", "-lang", lang] => list_dir(&pr_dir, Some(lang)),
+        ["list"] => list_dir(&pr_dir, None)?,
+        ["list", "-lang", lang] => list_dir(&pr_dir, Some(lang))?,
         ["version"] => println!("Pro CLI\nVersion: {}", env!("CARGO_PKG_VERSION")),
-        ["open", pr_name] => open_project(
-            pr_name,
-            &pr_dir,
-            &config.code_editor,
-            config.editor_flags,
-        )
-        .unwrap(),
+        ["open", pr_name] => {
+            open_project(pr_name, &pr_dir, &config.code_editor, config.editor_flags)?
+        }
         ["path", pr_name] => println!("{}", get_project_path(pr_name, &pr_dir)),
-        ["create", pr_name] => create_project(pr_name, &pr_dir),
-        ["remove", pr_name] => remove_project(&pr_name.to_owned(), &pr_dir).unwrap(),
+        ["create", pr_name] => create_project(pr_name, &pr_dir)?,
+        ["remove", pr_name] => remove_project(pr_name, &pr_dir)?,
         ["help"] => display_help_message(),
         ["comps"] => gen_comps(&pr_dir),
         ["serve"] => {
             start_server(config).unwrap();
         }
         _ => println!("Run `pro help` to get usage info"),
-    }
+    };
+    Ok(())
 }
