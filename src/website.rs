@@ -1,4 +1,4 @@
-use serde_json::{json, to_string};
+use serde_json::{json};
 use std::{collections::HashMap, fs::File, io::Cursor};
 use url::Url;
 
@@ -67,7 +67,7 @@ pub fn start_server(config: ProConfig) -> Result<(), ()> {
             }
             "/list" => {
                 let projects: Vec<_> = get_projects(&config.project_path);
-                let json_response = json!({ "projects": projects, "count": projects.len() });
+                let _json_response = json!({ "projects": projects, "count": projects.len() });
                 
             }
             x if x.starts_with("/remove") => {
