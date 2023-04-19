@@ -13,6 +13,7 @@ use std::{
 #[derive(Debug, Clone, Copy)]
 enum ProjectType {
     Typescript,
+    Javascript,
     Rust,
     Elixir,
     Clojure,
@@ -52,6 +53,7 @@ fn pr_type_to_str(pr_type: ProjectType) -> ColoredString {
     use ProjectType::*;
     match pr_type {
         Typescript => format!("{pr_type:?}").blue(),
+        Javascript => format!("{pr_type:?}").yellow(),
         Rust => format!("{pr_type:?}").red(),
         Elixir => format!("{pr_type:?}").purple(),
         Clojure => format!("{pr_type:?}").green(),
@@ -212,6 +214,7 @@ fn read_dir_files(dir_path: &str) -> Vec<String> {
 fn get_project_language(project_name: &str, projects_dir: &str) -> Option<ProjectType> {
     let projects_hashmap: HashMap<&str, ProjectType> = HashMap::from([
         ("tsconfig.json", ProjectType::Typescript),
+        ("package.json", ProjectType::Javascript),
         ("Cargo.toml", ProjectType::Rust),
         ("mix.exs", ProjectType::Elixir),
         ("deps.edn", ProjectType::Clojure),
